@@ -4,6 +4,7 @@ import { AppProvedor } from './src/contextos/AppContexto';
 import TelaDetalheEvento from './src/telas/TelaDetalheEvento';
 import TelaEventos from './src/telas/TelaEventos';
 import TelaMinhasInscricoes from './src/telas/TelaMinhasInscricoes';
+
    
   const Abas = createBottomTabNavigator();
    
