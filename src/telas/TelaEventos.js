@@ -40,11 +40,24 @@ export default function TelaEventos({ navigation }) {
   );
   const totalInscricoes = inscricoes.length;
 
+  //R2 onde a função inscrever foi refeita 
   function inscrever(evento) {
-    setInscricoes([...inscricoes, evento]);
-    setEventoSelecionado(evento);
-    setEnviado(true);
-  }
+  setInscricoes((atuais) => {
+    // verifica se o evento já está na lista
+    const jaInscrito = atuais.some((i) => i.id === evento.id);
+
+    if (jaInscrito) {
+      return atuais; // não muda nada
+    }
+
+    // cria uma lista nova com o evento adicionado
+    const novaLista = [...atuais, evento]; //aqui fiz um map para colocar os novos 
+    return novaLista;
+  });
+
+  setEventoSelecionado(evento);
+  setEnviado(true);
+}
 
   console.log('[render] TelaEventos');
 
