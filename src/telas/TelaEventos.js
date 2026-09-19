@@ -10,9 +10,8 @@ import CartaoEvento from '../componentes/CartaoEvento';
 import { AppContexto } from '../contextos/AppContexto';
 
 export default function TelaEventos({ navigation }) {
-  const { temaEscuro } = useContext(AppContexto);
+  const { temaEscuro, eventos, setEventos } = useContext(AppContexto);
 
-  const [eventos, setEventos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
   const [enviado, setEnviado] = useState(false);
@@ -20,7 +19,7 @@ export default function TelaEventos({ navigation }) {
   const [busca, setBusca] = useState('');
 
   const [inscricoes, setInscricoes] = useState([]);
-  const [eventoSelecionado, setEventoSelecionado] = useState(null);
+  const [eventoSelecionadoId, setEventoSelecionadoId] = useState(null);
 
   useEffect(() => {
     fetch('https://api.campus.iftm.edu.br/eventos')
@@ -34,30 +33,26 @@ export default function TelaEventos({ navigation }) {
       });
   }, []);
 
-  // Valores derivados: calculados na renderização, não guardados em estado
   const eventosFiltrados = eventos.filter((ev) =>
     ev.titulo.toLowerCase().includes(busca.toLowerCase())
   );
   const totalInscricoes = inscricoes.length;
 
-  //R2 onde a função inscrever foi refeita 
+  // busca o objeto só na hora de exibir o aviso, a partir do id guardado
+  const eventoSelecionado = eventos.find((ev) => ev.id === eventoSelecionadoId);
+
   function inscrever(evento) {
-  setInscricoes((atuais) => {
-    // verifica se o evento já está na lista
-    const jaInscrito = atuais.some((i) => i.id === evento.id);
+    setInscricoes((atuais) => {
+      const jaInscrito = atuais.some((i) => i.id === evento.id);
+      if (jaInscrito) {
+        return atuais;
+      }
+      return [...atuais, evento]; //aqui teve a criação de um map para colocar os novos inscritos
+    });
 
-    if (jaInscrito) {
-      return atuais; // não muda nada
-    }
-
-    // cria uma lista nova com o evento adicionado
-    const novaLista = [...atuais, evento]; //aqui fiz um map para colocar os novos 
-    return novaLista;
-  });
-
-  setEventoSelecionado(evento);
-  setEnviado(true);
-}
+    setEventoSelecionadoId(evento.id);
+    setEnviado(true);
+  }
 
   console.log('[render] TelaEventos');
 
@@ -86,7 +81,7 @@ export default function TelaEventos({ navigation }) {
             evento={item}
             aoInscrever={() => inscrever(item)}
             aoAbrir={() =>
-              navigation.navigate('Detalhe', { evento: item })}
+              navigation.navigate('Detalhe', { id: item.id })}
           />
         )}
       />
