@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useReducer, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,38 +8,51 @@ import {
 } from 'react-native';
 import CartaoEvento from '../componentes/CartaoEvento';
 import { AppContexto } from '../contextos/AppContexto';
+import { estadoInicialEventos, eventosReducer } from '../reducers/eventosReducer';
 
 export default function TelaEventos({ navigation }) {
-  const { temaEscuro, eventos, setEventos } = useContext(AppContexto);
+  const { temaEscuro, setEventos } = useContext(AppContexto);
 
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(null);
-  const [enviado, setEnviado] = useState(false);
+
+  //Antes: 3 variáveis booleanas/nulas independentes (carregando, erro, enviado) → 2 × 2 × 2 = 8 combinações possíveis, a maioria sem sentido (ex: carregando + erro + enviado juntos).
+  //Depois: 1 campo status com 3 valores mutuamente exclusivos → 3 combinações possíveis, todas fazendo sentido.
+
+  const [estado, dispatch] = useReducer(eventosReducer, estadoInicialEventos);
 
   const [busca, setBusca] = useState('');
-
   const [inscricoes, setInscricoes] = useState([]);
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState(null);
 
   useEffect(() => {
+    dispatch({ type: 'CARREGANDO' });
     fetch('https://api.campus.iftm.edu.br/eventos')
       .then((resposta) => resposta.json())
       .then((dados) => {
-        setEventos(dados);
-        setCarregando(false);
+        dispatch({ type: 'SUCESSO', payload: dados });
       })
       .catch((e) => {
-        setErro(e.message);
+        dispatch({ type: 'FALHA', payload: e.message });
       });
   }, []);
 
-  const eventosFiltrados = eventos.filter((ev) =>
+  // mantém o AppContexto sincronizado, pois a TelaDetalheEvento
+  // lê a lista de eventos a partir do contexto, não do reducer
+  useEffect(() => {
+    if (estado.status === 'sucesso') {
+      setEventos(estado.eventos);
+    }
+  }, [estado.status, estado.eventos]);
+
+  const eventosFiltrados = estado.eventos.filter((ev) =>
     ev.titulo.toLowerCase().includes(busca.toLowerCase())
   );
   const totalInscricoes = inscricoes.length;
 
   // busca o objeto só na hora de exibir o aviso, a partir do id guardado
-  const eventoSelecionado = eventos.find((ev) => ev.id === eventoSelecionadoId);
+  const eventoSelecionado = estado.eventos.find((ev) => ev.id === eventoSelecionadoId);
+
+  // "enviado" não existe mais como estado próprio: agora é derivado
+  const enviado = eventoSelecionadoId !== null;
 
   function inscrever(evento) {
     setInscricoes((atuais) => {
@@ -47,11 +60,10 @@ export default function TelaEventos({ navigation }) {
       if (jaInscrito) {
         return atuais;
       }
-      return [...atuais, evento]; //aqui teve a criação de um map para colocar os novos inscritos
+      return [...atuais, evento];
     });
 
     setEventoSelecionadoId(evento.id);
-    setEnviado(true);
   }
 
   console.log('[render] TelaEventos');
@@ -66,8 +78,10 @@ export default function TelaEventos({ navigation }) {
         onChangeText={setBusca}
         placeholder="Buscar evento"
       />
-      {carregando && <ActivityIndicator size="large" />}
-      {erro && <Text style={styles.erro}>Falha: {erro}</Text>}
+      {estado.status === 'carregando' && <ActivityIndicator size="large" />}
+      {estado.status === 'falha' && (
+        <Text style={styles.erro}>Falha: {estado.erro}</Text>
+      )}
       {enviado && eventoSelecionado && (
         <Text style={styles.aviso}>
           Inscrição confirmada em {eventoSelecionado.titulo}
