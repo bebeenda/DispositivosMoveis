@@ -8,17 +8,18 @@ import {
 } from 'react-native';
 import CartaoEvento from '../componentes/CartaoEvento';
 import { AppContexto } from '../contextos/AppContexto';
+import { useInscricoes } from '../contextos/InscricoesContexto';
 import { eventosReducer, estadoInicialEventos } from '../reducers/eventosReducer';
 
 export default function TelaEventos({ navigation }) {
   const { temaEscuro, setEventos } = useContext(AppContexto);
+  const { idsInscritos, inscrever: inscreverNoContexto } = useInscricoes();
   //Antes: 3 variáveis booleanas/nulas independentes (carregando, erro, enviado) → 2 × 2 × 2 = 8 combinações possíveis, a maioria sem sentido (ex: carregando + erro + enviado juntos).
   //Depois: 1 campo status com 3 valores mutuamente exclusivos → 3 combinações possíveis, todas fazendo sentido.
 
   const [estado, dispatch] = useReducer(eventosReducer, estadoInicialEventos);
 
   const [busca, setBusca] = useState('');
-  const [inscricoes, setInscricoes] = useState([]);
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState(null);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function TelaEventos({ navigation }) {
   const eventosFiltrados = estado.eventos.filter((ev) =>
     ev.titulo.toLowerCase().includes(busca.toLowerCase())
   );
-  const totalInscricoes = inscricoes.length;
+  const totalInscricoes = idsInscritos.length;
 
   // busca o objeto só na hora de exibir o aviso, a partir do id guardado
   const eventoSelecionado = estado.eventos.find((ev) => ev.id === eventoSelecionadoId);
@@ -69,14 +70,7 @@ export default function TelaEventos({ navigation }) {
   const enviado = eventoSelecionadoId !== null;
 
   function inscrever(evento) {
-    setInscricoes((atuais) => {
-      const jaInscrito = atuais.some((i) => i.id === evento.id);
-      if (jaInscrito) {
-        return atuais;
-      }
-      return [...atuais, evento];
-    });
-
+    inscreverNoContexto(evento.id);
     setEventoSelecionadoId(evento.id);
   }
 
