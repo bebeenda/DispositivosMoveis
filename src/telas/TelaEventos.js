@@ -8,12 +8,10 @@ import {
 } from 'react-native';
 import CartaoEvento from '../componentes/CartaoEvento';
 import { AppContexto } from '../contextos/AppContexto';
-import { estadoInicialEventos, eventosReducer } from '../reducers/eventosReducer';
+import { eventosReducer, estadoInicialEventos } from '../reducers/eventosReducer';
 
 export default function TelaEventos({ navigation }) {
   const { temaEscuro, setEventos } = useContext(AppContexto);
-
-
   //Antes: 3 variáveis booleanas/nulas independentes (carregando, erro, enviado) → 2 × 2 × 2 = 8 combinações possíveis, a maioria sem sentido (ex: carregando + erro + enviado juntos).
   //Depois: 1 campo status com 3 valores mutuamente exclusivos → 3 combinações possíveis, todas fazendo sentido.
 
@@ -24,15 +22,31 @@ export default function TelaEventos({ navigation }) {
   const [eventoSelecionadoId, setEventoSelecionadoId] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     dispatch({ type: 'CARREGANDO' });
-    fetch('https://api.campus.iftm.edu.br/eventos')
-      .then((resposta) => resposta.json())
+    fetch('https://api.campus.iftm.edu.br/eventos', { signal: controller.signal })
+      .then((resposta) => {
+        if (!resposta.ok) {
+          throw new Error(`Erro HTTP: ${resposta.status}`);
+        }
+        return resposta.json();
+      })
       .then((dados) => {
         dispatch({ type: 'SUCESSO', payload: dados });
       })
       .catch((e) => {
+        // requisição cancelada porque saímos da tela: não é uma falha real
+        if (e.name === 'AbortError') {
+          return;
+        }
         dispatch({ type: 'FALHA', payload: e.message });
       });
+
+    // função de limpeza: roda quando o componente sai da tela (desmonta)
+    return () => {
+      controller.abort();
+    };
   }, []);
 
   // mantém o AppContexto sincronizado, pois a TelaDetalheEvento
